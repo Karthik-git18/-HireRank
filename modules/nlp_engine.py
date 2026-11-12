@@ -99,13 +99,14 @@ def _safe_clean_line(value):
 
 def _extract_role(description):
     text = description or ""
-    for pattern in [
-        r"(?:looking for|seeking|hiring|role of|position for|joining as)\s+(?:an?\s+)?([A-Z][A-Za-z0-9+/.-]*(?:\s+[A-Z][A-Za-z0-9+/.-]*){0,5})",
-        r"(?:we are looking for a|we are hiring a|we are seeking a)\s+([A-Z][A-Za-z0-9+/.-]*(?:\s+[A-Z][A-Za-z0-9+/.-]*){0,5})",
-    ]:
-        match = re.search(pattern, text)
-        if match:
-            return _safe_clean_line(match.group(1))
+    match = re.search(
+        r"(?:looking for|seeking|hiring|role of|position for|joining as)\s+"
+        r"(?:an?\s+)?([^.\n;]+)",
+        text,
+        re.I,
+    )
+    if match:
+        return _safe_clean_line(match.group(1))
     cap_phrases = re.findall(r"\b[A-Z][A-Za-z0-9+/.-]*(?:\s+[A-Z][A-Za-z0-9+/.-]*)+\b", text)
     if cap_phrases:
         return _safe_clean_line(cap_phrases[0])
@@ -129,15 +130,17 @@ def _extract_minimum_experience(description):
 
 def _extract_education(description):
     text = description or ""
-    patterns = [
-        r"(?:b\.sc|bsc|b\.tech|btech|bachelor(?:'s)?|undergraduate|degree)\b[\w\s-]*",
-        r"(?:master(?:'s)?|m\.tech|mtech|postgraduate|mba|phd|doctorate)\b[\w\s-]*",
-        r"(?:diploma|associate degree|engineering degree|computer science degree)\b[\w\s-]*",
-    ]
+    education_start = re.compile(
+        r"\b(?:bachelor(?:['’]s)?|b\.?sc|b\.?tech|undergraduate|"
+        r"master(?:['’]s)?|m\.?tech|postgraduate|mba|phd|doctorate|"
+        r"diploma|associate degree|engineering degree|degree)\b",
+        re.I,
+    )
     matches = []
-    for pattern in patterns:
-        for match in re.finditer(pattern, text, re.I):
-            value = _safe_clean_line(match.group(0))
+    for line in text.splitlines():
+        match = education_start.search(line)
+        if match:
+            value = _safe_clean_line(line[match.start():])
             if value and value.lower() not in {item.lower() for item in matches}:
                 matches.append(value)
     if matches:
@@ -157,25 +160,37 @@ def _extract_soft_skills(description):
 def _extract_responsibilities(description):
     text = description or ""
     candidates = []
-    patterns = [
-        r"(?:key\s+)?(?:responsibilities|duties|you\s+will|the\s+candidate\s+will)\s*[:\-]?\s*(.*)",
-        r"(?:role\s+includes|includes|responsible\s+for)\s*[:\-]?\s*(.*)",
-    ]
-    for pattern in patterns:
-        for match in re.finditer(pattern, text, re.I):
-            body = match.group(1)
-            pieces = re.split(r"(?<=[.;])\s+|\n+", body)
-            for piece in pieces:
-                value = _safe_clean_line(piece)
-                if value and len(value.split()) >= 3:
-                    candidates.append(value)
+    in_responsibilities = False
+    for line in text.splitlines():
+        heading = re.match(
+            r"^\s*(?:key\s+)?(?:responsibilities|duties)\s*[:\-]?\s*(.*)$",
+            line,
+            re.I,
+        )
+        if heading:
+            in_responsibilities = True
+            line = heading.group(1)
+        elif in_responsibilities and re.match(
+            r"^\s*(?:preferred|mandatory|required|qualifications|education|"
+            r"experience|soft skills|skills)\b",
+            line,
+            re.I,
+        ):
+            break
+        elif not in_responsibilities:
+            continue
+
+        for piece in re.split(r"(?<=[.;])\s+|[,]\s+(?=[A-Z])", line):
+            value = _safe_clean_line(re.sub(r"^\s*[-*•]\s*", "", piece))
+            if value and len(value.split()) >= 2:
+                candidates.append(value)
     if not candidates:
         for sentence in re.split(r"(?<=[.;])\s+|\n+", text):
             sentence = _safe_clean_line(sentence)
             if not sentence:
                 continue
             lowered = sentence.lower()
-            if any(keyword in lowered for keyword in ["build", "design", "develop", "manage", "analyze", "coordinate", "lead", "work", "support", "deliver", "maintain"]):
+            if any(keyword in lowered for keyword in ["build", "design", "develop", "debug", "manage", "analyze", "coordinate", "lead", "work", "support", "deliver", "maintain"]):
                 candidates.append(sentence)
     return candidates[:6]
 
@@ -199,7 +214,11 @@ def _extract_keywords(description):
 def analyze_job_requirements(description):
     """Suggest skills from a job description; recruiters can edit the suggestions."""
     text = description or ""
-    all_skills = list(extract_skills(text))
+    detected_skills = extract_skills(text)
+    all_skills = [
+        skill for skill, category in detected_skills.items()
+        if category != "Soft skills"
+    ]
     preferred_text = []
     required_text = []
     in_preferred = False
@@ -221,11 +240,17 @@ def analyze_job_requirements(description):
             required_text.append(line)
         else:
             required_text.append(line)
-    preferred_skills = list(extract_skills("\n".join(preferred_text)))
+    preferred_skills = [
+        skill for skill, category in extract_skills("\n".join(preferred_text)).items()
+        if category != "Soft skills"
+    ]
     preferred_lower = {skill.lower() for skill in preferred_skills}
     required_skills = [skill for skill in all_skills if skill.lower() not in preferred_lower]
     if not required_skills:
-        required_skills = list(extract_skills("\n".join(required_text)))
+        required_skills = [
+            skill for skill, category in extract_skills("\n".join(required_text)).items()
+            if category != "Soft skills"
+        ]
 
     education = _extract_education(text)
     minimum_experience = _extract_minimum_experience(text)

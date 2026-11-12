@@ -203,15 +203,52 @@ def create_app(test_config=None):
         return render_template("jobs.html", jobs=rows)
 
     @app.route("/jobs/analyze", methods=["GET", "POST"])
-    @login_required
     def analyze_job_route():
-        description = ""
+        if g.user is None:
+            return jsonify({
+                "error": "authentication_required",
+                "message": "Please log in to analyze a job description.",
+            }), 401
+
         if request.method == "POST":
-            payload = request.get_json(silent=True) or {}
-            description = str(payload.get("description", "") or request.form.get("description", "") or "")
+            if request.is_json:
+                payload = request.get_json(silent=True)
+                if payload is None:
+                    return jsonify({
+                        "error": "invalid_json",
+                        "message": "The request body must contain valid JSON.",
+                    }), 400
+                if not isinstance(payload, dict):
+                    return jsonify({
+                        "error": "invalid_payload",
+                        "message": "The JSON body must be an object containing a description.",
+                    }), 400
+                description = payload.get("description", "")
+            elif request.form:
+                description = request.form.get("description", "")
+            else:
+                return jsonify({
+                    "error": "unsupported_media_type",
+                    "message": "Send the description as JSON or form data.",
+                }), 415
         else:
             description = request.args.get("description", "")
-        analysis = analyze_job_requirements(description)
+
+        if not isinstance(description, str) or not description.strip():
+            return jsonify({
+                "error": "invalid_description",
+                "message": "Provide a non-empty job description to analyze.",
+            }), 400
+
+        try:
+            analysis = analyze_job_requirements(description)
+        except Exception:
+            app.logger.exception("Failed to analyze job description")
+            return jsonify({
+                "error": "analysis_failed",
+                "message": "The job description could not be analyzed. Please try again.",
+            }), 500
+
         return jsonify({
             "role": analysis.get("role", "Not specified"),
             "required_skills": analysis.get("required_skills", []),
@@ -647,7 +684,13 @@ def create_app(test_config=None):
         return render_template("error.html", code=404, message="The requested page or record was not found."), 404
 
     @app.errorhandler(400)
-    def bad_request(_error):
+    def bad_request(error):
+        if request.endpoint == "analyze_job_route":
+            app.logger.warning("Job analysis request validation failed: %s", error)
+            return jsonify({
+                "error": "request_validation_failed",
+                "message": "The request could not be validated. Refresh the page and try again.",
+            }), 400
         return render_template("error.html", code=400, message="The request could not be processed."), 400
 
     return app

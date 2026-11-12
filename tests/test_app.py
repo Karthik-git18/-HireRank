@@ -1,5 +1,6 @@
 import io
 import json
+import re
 
 import fitz
 import pytest
@@ -212,6 +213,127 @@ def test_nlp_job_analysis_parser_and_ranking():
         "education_requirement": "", "job_text": "internship",
     })
     assert no_experience_required["experience_score"] == 100
+
+
+def test_job_analysis_extracts_description_requirements():
+    description = """We are looking for a Python Developer.
+
+Mandatory Qualifications:
+
+- Strong knowledge of Python.
+- Experience with SQL.
+- Knowledge of Flask.
+- Understanding of REST API development.
+
+Preferred Qualifications:
+
+- Knowledge of Docker.
+- Familiarity with AWS.
+
+Minimum 1 year of professional experience.
+
+Bachelor’s degree in Computer Science.
+
+Responsibilities:
+
+- Develop backend applications.
+- Design and manage databases.
+- Build REST APIs.
+- Debug applications.
+
+Soft Skills:
+
+- Communication.
+- Teamwork.
+- Problem Solving."""
+
+    analysis = analyze_job_requirements(description)
+
+    assert analysis["role"] == "Python Developer"
+    assert analysis["required_skills"] == ["Python", "SQL", "Flask", "REST API"]
+    assert analysis["preferred_skills"] == ["Docker", "AWS"]
+    assert analysis["minimum_experience"] == 1
+    assert analysis["education_requirements"] == ["Bachelor’s degree in Computer Science"]
+    assert set(analysis["job_responsibilities"]) == {
+        "Develop backend applications",
+        "Design and manage databases",
+        "Build REST APIs",
+        "Debug applications",
+    }
+    assert analysis["soft_skills"] == ["Communication", "Teamwork", "Problem Solving"]
+
+
+def test_job_analysis_endpoint_validates_inputs_and_authentication(client, monkeypatch, caplog):
+    register(client)
+    description = "We are looking for a Python Developer. Mandatory skills: Python, SQL, Flask, REST API."
+
+    response = client.post("/jobs/analyze", json={"description": description})
+    assert response.status_code == 200
+    assert response.is_json
+    assert response.get_json()["required_skills"] == ["Python", "SQL", "Flask", "REST API"]
+
+    empty = client.post("/jobs/analyze", json={"description": "  "})
+    assert empty.status_code == 400
+    assert empty.get_json()["error"] == "invalid_description"
+
+    invalid_json = client.post("/jobs/analyze", data="{", content_type="application/json")
+    assert invalid_json.status_code == 400
+    assert invalid_json.get_json()["error"] == "invalid_json"
+
+    def fail_analysis(_description):
+        raise RuntimeError("analyzer failure")
+
+    monkeypatch.setattr("app.analyze_job_requirements", fail_analysis)
+    failed = client.post("/jobs/analyze", json={"description": description})
+    assert failed.status_code == 500
+    assert failed.get_json()["error"] == "analysis_failed"
+    assert "analyzer failure" in caplog.text
+
+    client.post("/logout")
+    unauthenticated = client.post("/jobs/analyze", json={"description": description})
+    assert unauthenticated.status_code == 401
+    assert unauthenticated.is_json
+    assert unauthenticated.get_json()["error"] == "authentication_required"
+
+
+def test_job_analysis_endpoint_accepts_csrf_token(tmp_path):
+    csrf_app = create_app({
+        "TESTING": True,
+        "WTF_CSRF_ENABLED": True,
+        "SECRET_KEY": "csrf-test-key",
+        "DATABASE": str(tmp_path / "csrf-test.sqlite3"),
+        "UPLOAD_FOLDER": tmp_path / "uploads",
+    })
+    csrf_client = csrf_app.test_client()
+
+    login_page = csrf_client.get("/login")
+    token = re.search(rb'name="csrf_token" value="([^"]+)"', login_page.data).group(1).decode()
+    csrf_client.post("/register", data={
+        "csrf_token": token,
+        "full_name": "Test Recruiter",
+        "company_name": "Example Co",
+        "email": "csrf@example.com",
+        "password": "secure-pass-123",
+        "confirm_password": "secure-pass-123",
+    })
+
+    job_form = csrf_client.get("/jobs/create")
+    token = re.search(rb'name="csrf_token" value="([^"]+)"', job_form.data).group(1).decode()
+    payload = {"description": "Python Developer using Flask"}
+
+    missing_token = csrf_client.post("/jobs/analyze", json=payload)
+    assert missing_token.status_code == 400
+    assert missing_token.is_json
+    assert missing_token.get_json()["error"] == "request_validation_failed"
+
+    valid_token = csrf_client.post(
+        "/jobs/analyze",
+        json=payload,
+        headers={"X-CSRFToken": token},
+    )
+    assert valid_token.status_code == 200
+    assert valid_token.is_json
+    assert valid_token.get_json()["role"] == "Python Developer"
 
 
 def test_invalid_and_oversized_pdf_messages(client, app):

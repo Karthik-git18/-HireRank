@@ -58,13 +58,50 @@ document.addEventListener("DOMContentLoaded", () => {
       window.alert("Add a job description before running the analysis.");
       return;
     }
+    let responseDetails = {};
     try {
+      const csrfToken = document.querySelector('form.form-layout input[name="csrf_token"]')?.value;
+      if (!csrfToken) {
+        throw new Error("The security token is missing. Refresh the page and try again.");
+      }
       const response = await fetch("/jobs/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
         body: JSON.stringify({ description }),
       });
-      const payload = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      const responseBody = await response.text();
+      responseDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        contentType,
+      };
+      if (!contentType.toLowerCase().includes("application/json")) {
+        responseDetails.body = responseBody.slice(0, 500);
+        throw new Error(
+          response.ok
+            ? "The server returned an unexpected non-JSON response."
+            : `The analysis request failed with HTTP ${response.status}. The server returned a non-JSON response.`,
+        );
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(responseBody);
+      } catch {
+        responseDetails.body = responseBody.slice(0, 500);
+        throw new Error("The server returned malformed JSON for the analysis request.");
+      }
+      responseDetails.payload = payload;
+      if (!response.ok) {
+        throw new Error(payload.message || `The analysis request failed with HTTP ${response.status}.`);
+      }
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new Error("The server returned an invalid analysis response.");
+      }
       document.getElementById("analysisRole").textContent = payload.role || "Not specified";
       document.getElementById("analysisExperience").textContent = payload.minimum_experience !== null && payload.minimum_experience !== undefined ? `${payload.minimum_experience} years` : "Not specified";
       document.getElementById("analysisEducation").textContent = (payload.education_requirements || []).length ? payload.education_requirements.join(", ") : "Not specified";
@@ -93,7 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
         educationField.value = education;
       }
     } catch (error) {
-      window.alert("The description analysis could not be generated. Please review the text and continue manually.");
+      console.error("Job description analysis failed.", { ...responseDetails, error });
+      window.alert(error instanceof Error ? error.message : "The description analysis failed. Please review the text and try again.");
     }
   });
 
