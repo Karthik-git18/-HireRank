@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | HireRank{% endblock %}
+{% block breadcrumb %}Workspace <span>/</span> Dashboard{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">OVERVIEW</span><h1>Good work starts with clarity.</h1><p>Here’s what’s happening across your recruitment workspace.</p></div><a class="btn btn-primary" href="{{ url_for('job_form') }}"><i class="fa-solid fa-plus me-2"></i> Create a vacancy</a></div>
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-briefcase"></i></div><span>Active jobs</span><strong>{{ data.totals.active_jobs or 0 }}</strong><small>Open vacancies</small></div>
+  <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-users"></i></div><span>Candidates</span><strong>{{ data.totals.candidates or 0 }}</strong><small>Unique candidate profiles</small></div>
+  <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-file-circle-check"></i></div><span>Resumes screened</span><strong>{{ data.totals.processed or 0 }}</strong><small>Across active vacancies</small></div>
+  <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-user-check"></i></div><span>Shortlisted</span><strong>{{ data.totals.shortlisted or 0 }}</strong><small>Human-reviewed decisions</small></div>
+</div>
+<div class="content-grid">
+  <section class="panel panel-large"><div class="panel-heading"><div><h2>Recruitment activity</h2><p>Applications received over time</p></div><a href="{{ url_for('analytics') }}" class="text-link">View reports <i class="fa-solid fa-arrow-right"></i></a></div>
+    {% if data.activity %}<div class="chart-holder"><canvas id="activityChart"></canvas></div>{% else %}<div class="empty-state compact"><div class="empty-icon"><i class="fa-solid fa-chart-line"></i></div><h3>No activity yet</h3><p>Upload resumes for an active vacancy to see recruitment activity here.</p><a href="{{ url_for('jobs') }}" class="btn btn-sm btn-outline-primary">View vacancies</a></div>{% endif %}
+  </section>
+  <section class="panel"><div class="panel-heading"><div><h2>Candidate status</h2><p>Current pipeline</p></div></div>
+    {% if data.statuses %}<div class="chart-holder chart-donut"><canvas id="statusChart"></canvas></div><div class="legend-list">{% for name,count in data.statuses.items() %}<div><span class="legend-dot"></span>{{ name }}<b>{{ count }}</b></div>{% endfor %}</div>{% else %}<div class="empty-state compact"><div class="empty-icon"><i class="fa-solid fa-users"></i></div><h3>Nothing in the pipeline</h3><p>Candidate statuses will appear after screening begins.</p></div>{% endif %}
+  </section>
+</div>
+<div class="content-grid bottom-grid">
+  <section class="panel panel-large"><div class="panel-heading"><div><h2>Recent vacancies</h2><p>Latest openings in your workspace</p></div><a href="{{ url_for('jobs') }}" class="text-link">All vacancies <i class="fa-solid fa-arrow-right"></i></a></div>
+    {% if data.jobs %}<div class="table-responsive"><table class="table align-middle data-table"><thead><tr><th>Job title</th><th>Status</th><th>Applicants</th><th>Average match</th><th></th></tr></thead><tbody>{% for job in data.jobs %}<tr><td><a class="table-primary-link" href="{{ url_for('job_details',job_id=job.id) }}">{{ job.job_title }}</a><small>{{ job.department or 'Department not set' }}</small></td><td><span class="status-pill {{ 'status-green' if job.status == 'Active' else 'status-gray' }}">{{ job.status }}</span></td><td>{{ job.applicants }}</td><td>{{ score_label(job.average_score) }}</td><td><a class="icon-link" href="{{ url_for('job_details',job_id=job.id) }}"><i class="fa-solid fa-arrow-right"></i></a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state compact"><h3>No vacancies created</h3><p>Create a vacancy with role-specific requirements to start screening.</p><a href="{{ url_for('job_form') }}" class="btn btn-primary btn-sm">Create your first vacancy</a></div>{% endif %}
+  </section>
+  <section class="panel"><div class="panel-heading"><div><h2>Recent applicants</h2><p>Latest resume submissions</p></div><a href="{{ url_for('candidates') }}" class="text-link">View all</a></div>
+    {% if data.recent %}<div class="recent-list">{% for row in data.recent %}<a class="recent-item" href="{{ url_for('application_details',application_id=row.id) }}"><span class="avatar avatar-soft">{{ row.candidate_name[:1]|upper }}</span><span class="recent-info"><b>{{ row.candidate_name }}</b><small>{{ row.job_title }}</small></span><span class="recent-score">{{ score_label(row.overall_score) }}</span></a>{% endfor %}</div>{% else %}<div class="empty-state compact"><h3>No applicants yet</h3><p>Candidate activity will show here after the first upload.</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const activity = {{ data.activity|tojson }};
+const statuses = {{ data.statuses|tojson }};
+if (activity.length && window.Chart) HireRankCharts.line('activityChart', activity.map(x=>x.day), activity.map(x=>x.total));
+if (Object.keys(statuses).length && window.Chart) HireRankCharts.doughnut('statusChart', Object.keys(statuses), Object.values(statuses));
+</script>
+{% endblock %}

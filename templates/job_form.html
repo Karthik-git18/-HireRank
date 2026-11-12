@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit vacancy' if job else 'Create vacancy' }} | HireRank{% endblock %}
+{% block breadcrumb %}Workspace <span>/</span> <a href="{{ url_for('jobs') }}">Job Vacancies</a> <span>/</span> {{ 'Edit' if job else 'New vacancy' }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">ROLE REQUIREMENTS</span><h1>{{ 'Edit vacancy' if job else 'Create a vacancy' }}</h1><p>Define role-specific criteria. Matching scores help review—not make—hiring decisions.</p></div></div>
+<form method="post" class="form-layout">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="panel form-panel"><div class="section-title"><span>01</span><div><h2>Role information</h2><p>Describe the vacancy and its working arrangement.</p></div></div>
+    <div class="row g-3"><div class="col-md-7"><label class="form-label">Job title <em>*</em></label><input class="form-control" name="job_title" required value="{{ job.job_title if job else request.form.get('job_title','') }}" placeholder="e.g. Data Analyst"></div>
+    <div class="col-md-5"><label class="form-label">Department</label><input class="form-control" name="department" value="{{ job.department if job else request.form.get('department','') }}" placeholder="e.g. Product & Technology"></div>
+    <div class="col-md-5"><label class="form-label">Location</label><input class="form-control" name="location" value="{{ job.location if job else request.form.get('location','') }}" placeholder="e.g. Bengaluru / Remote"></div>
+    <div class="col-md-4"><label class="form-label">Employment type</label><select class="form-select" name="employment_type">{% for item in employment_types %}<option {% if job and job.employment_type == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label">Status</label><select class="form-select" name="status"><option {% if not job or job.status == 'Active' %}selected{% endif %}>Active</option><option {% if job and job.status == 'Closed' %}selected{% endif %}>Closed</option></select></div>
+    <div class="col-md-4"><label class="form-label">Required experience (years)</label><input class="form-control" type="number" min="0" max="60" step="0.5" name="required_experience" value="{{ job.required_experience if job and job.required_experience is not none else request.form.get('required_experience','') }}" placeholder="Leave blank if unspecified"></div>
+    <div class="col-md-8"><label class="form-label">Minimum education</label><input class="form-control" name="education_requirement" value="{{ job.education_requirement if job else request.form.get('education_requirement','') }}" placeholder="e.g. Bachelor's degree in Computer Science"></div>
+    <div class="col-12"><label class="form-label">Full job description <em>*</em></label><textarea class="form-control" name="job_description" rows="7" required placeholder="Include responsibilities, must-have qualifications and role context.">{{ job.job_description if job else request.form.get('job_description','') }}</textarea><div class="form-hint">Used for textual similarity. Scores compare resume wording with this description.</div></div>
+  </div></section>
+  <section class="panel form-panel"><div class="section-title"><span>02</span><div><h2>AI job analysis</h2><p>Review the extracted role criteria before saving. Edit anything that is uncertain.</p></div><button class="btn btn-light btn-sm ms-auto" type="button" id="analyzeDescription">Analyze description</button></div>
+    <div class="analysis-preview" id="analysisPreview">
+      <div class="analysis-grid">
+        <div class="analysis-card"><span class="analysis-label">Role</span><strong id="analysisRole">Not captured yet</strong></div>
+        <div class="analysis-card"><span class="analysis-label">Experience</span><strong id="analysisExperience">Not specified</strong></div>
+        <div class="analysis-card"><span class="analysis-label">Education</span><strong id="analysisEducation">Not specified</strong></div>
+        <div class="analysis-card"><span class="analysis-label">Confidence</span><strong id="analysisConfidence">Low</strong></div>
+      </div>
+      <div class="analysis-lists">
+        <div><h4>Mandatory skills</h4><ul id="analysisRequiredSkills" class="analysis-list"></ul></div>
+        <div><h4>Preferred skills</h4><ul id="analysisPreferredSkills" class="analysis-list"></ul></div>
+        <div><h4>Keywords</h4><ul id="analysisKeywords" class="analysis-list"></ul></div>
+        <div><h4>Soft skills</h4><ul id="analysisSoftSkills" class="analysis-list"></ul></div>
+      </div>
+      <div class="analysis-lists responsibilities-wrap">
+        <div><h4>Responsibilities</h4><ul id="analysisResponsibilities" class="analysis-list"></ul></div>
+      </div>
+    </div>
+  </section>
+  <section class="panel form-panel"><div class="section-title"><span>03</span><div><h2>Skills criteria</h2><p>Separate comma-delimited skills. These requirements drive skill coverage scores.</p></div><button class="btn btn-light btn-sm ms-auto" type="button" id="suggestSkills" data-skills='{{ skill_catalog|tojson }}'>Suggest from description</button></div>
+    <div class="mb-3"><label class="form-label">Required skills</label><textarea class="form-control" name="required_skills" rows="3" placeholder="Python, SQL, Flask">{{ job.required_skills|join(', ') if job else request.form.get('required_skills','') }}</textarea><div class="form-hint">Only detected skills from this role count toward required coverage.</div></div>
+    <div><label class="form-label">Preferred skills</label><textarea class="form-control" name="preferred_skills" rows="3" placeholder="Docker, AWS">{{ job.preferred_skills|join(', ') if job else request.form.get('preferred_skills','') }}</textarea></div>
+  </section>
+  <div class="form-footer"><a href="{{ url_for('jobs') }}" class="btn btn-light">Cancel</a><button class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>{{ 'Save changes' if job else 'Create vacancy' }}</button></div>
+</form>
+{% endblock %}

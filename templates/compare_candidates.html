@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Compare candidates | HireRank{% endblock %}
+{% block breadcrumb %}Workspace <span>/</span> Candidate Comparison{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">SIDE-BY-SIDE REVIEW</span><h1>Candidate comparison</h1><p>Compare candidates against the same vacancy. No single score decides who is best.</p></div><a href="{{ url_for('candidates') }}" class="btn btn-light">Back to candidates</a></div>
+<div class="panel"><p class="muted mb-4">Role: <strong>{{ candidates[0].job_title }}</strong></p><div class="table-responsive"><table class="table comparison-table"><thead><tr><th>Measure</th>{% for c in candidates %}<th><a href="{{ url_for('application_details',application_id=c.id) }}">{{ c.candidate_name }}</a><small class="d-block muted">{{ c.email or 'Email not provided' }}</small><a class="small" href="{{ url_for('serve_resume',application_id=c.id) }}">View resume</a></th>{% endfor %}</tr></thead><tbody>
+{% for label,key in [('Overall match','overall_score'),('Text similarity','similarity_score'),('Required skill coverage','skill_score'),('Preferred skill coverage','preferred_skill_score'),('Experience match','experience_score'),('Education match','education_score')] %}<tr><th>{{ label }}</th>{% for c in candidates %}<td>{{ score_label(c[key]) }}</td>{% endfor %}</tr>{% endfor %}
+<tr><th>Experience found</th>{% for c in candidates %}{% set a=c.analysis_json|from_json %}<td>{{ a.experience_years if a.experience_years is not none else 'Not verified' }}{% if a.experience_years is not none %} years{% endif %}</td>{% endfor %}</tr>
+<tr><th>Required skills matched</th>{% for c in candidates %}<td>{{ c.matching_skills|from_json|join(', ') or 'None detected' }}</td>{% endfor %}</tr>
+<tr><th>Required skills missing</th>{% for c in candidates %}<td class="comparison-missing">{{ c.missing_skills|from_json|join(', ') or 'None recorded' }}</td>{% endfor %}</tr>
+<tr><th>Current status</th>{% for c in candidates %}<td><span class="status-pill status-gray">{{ c.application_status }}</span></td>{% endfor %}</tr>
+</tbody></table></div><div class="callout-note mt-3">HireRank provides consistent, role-specific evidence to support human review. Review source resumes and context before making a decision.</div></div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}HireRank | Explainable hiring intelligence{% endblock %}
+{% block public_content %}
+<section class="hero container">
+  <div class="hero-copy">
+    <span class="eyebrow"><i class="fa-solid fa-sparkles"></i> RECRUITMENT, MADE CLEARER</span>
+    <h1>Find the right fit.<br><span>Understand why.</span></h1>
+    <p>Screen resumes against your role requirements with transparent, locally processed matching insights. Keep every hiring decision in human hands.</p>
+    <div class="d-flex flex-wrap gap-3 mt-4"><a class="btn btn-primary btn-lg" href="{{ url_for('register') }}">Create your workspace <i class="fa-solid fa-arrow-right ms-2"></i></a><a class="btn btn-outline-secondary btn-lg" href="{{ url_for('login') }}">Sign in</a></div>
+    <div class="hero-note"><i class="fa-solid fa-shield-halved"></i> Private by design <span>•</span> No external AI APIs <span>•</span> Human-led decisions</div>
+  </div>
+  <div class="hero-art">
+    <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+    <div class="preview-card">
+      <div class="d-flex justify-content-between align-items-center"><div><small class="muted">SCREENING WORKFLOW</small><h5 class="mb-0 mt-1">Role-specific analysis</h5></div><span class="status-pill status-blue">Human-led</span></div>
+      <div class="preview-score"><div class="workflow-icon"><i class="fa-solid fa-scale-balanced"></i></div><div><strong>Evidence, not decisions</strong><small class="d-block muted">Every criterion can be reviewed</small></div></div>
+      <div class="preview-skill"><span>Resume text</span><span class="workflow-state">Compared with role</span></div>
+      <div class="preview-skill"><span>Required skills</span><span class="workflow-state">Matched or missing</span></div>
+      <div class="preview-skill"><span>Experience</span><span class="workflow-state">Verified or unknown</span></div>
+      <div class="preview-foot"><i class="fa-solid fa-circle-info"></i> No automatic hiring or rejection</div>
+    </div>
+    <div class="float-chip"><span class="avatar"><i class="fa-solid fa-lock"></i></span><div><b>Local resume processing</b><small>No external AI services</small></div><i class="fa-solid fa-circle-check text-success"></i></div>
+  </div>
+</section>
+<section class="container feature-strip">
+  <div><i class="fa-solid fa-file-lines"></i><b>Resume intelligence</b><span>Extract skills and experience locally</span></div>
+  <div><i class="fa-solid fa-scale-balanced"></i><b>Explainable matching</b><span>See how each score is assembled</span></div>
+  <div><i class="fa-solid fa-user-check"></i><b>Human-led hiring</b><span>Your team owns every decision</span></div>
+</section>
+<footer class="public-footer">HireRank <span>•</span> A transparent recruitment screening workspace</footer>
+{% endblock %}

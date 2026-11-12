@@ -1,0 +1,1 @@
+"""HireRank application modules."""

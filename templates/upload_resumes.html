@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Upload resumes | HireRank{% endblock %}
+{% block breadcrumb %}Workspace <span>/</span> <a href="{{ url_for('jobs') }}">Job Vacancies</a> <span>/</span> Resume screening{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">RESUME SCREENING</span><h1>Upload candidates</h1><p>Screen resumes for <strong>{{ job.job_title }}</strong> against this role’s requirements.</p></div><a class="btn btn-light" href="{{ url_for('job_details',job_id=job.id) }}">Back to vacancy</a></div>
+<div class="upload-layout"><section class="panel upload-panel"><form method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label class="dropzone" for="resumeFiles"><span class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span><strong>Choose resumes to upload</strong><span>PDF files only · up to 5 MB each · multiple files supported</span><input id="resumeFiles" type="file" name="resumes" accept="application/pdf,.pdf" multiple required></label>
+  <div id="fileList" class="file-list"></div>
+  <div class="privacy-note"><i class="fa-solid fa-lock"></i><span><b>Private screening</b><small>Files are stored in the local application data folder and served only to authorized workspace users. Scanned PDFs require OCR, which is not supported.</small></span></div>
+  <button class="btn btn-primary w-100 mt-4"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Upload and screen resumes</button>
+</form></section>
+<aside class="panel"><h2>What happens next?</h2><div class="steps-list"><div><span>1</span><p><b>Extract</b><small>Text and contact details are extracted from each PDF.</small></p></div><div><span>2</span><p><b>Analyze</b><small>Skills and explicit experience are identified with local rules.</small></p></div><div><span>3</span><p><b>Compare</b><small>TF-IDF similarity and role-specific criteria inform a transparent score.</small></p></div></div><div class="callout-note">A match score is a text-based screening aid—not a probability of success or an automatic hiring decision.</div></aside></div>
+{% endblock %}

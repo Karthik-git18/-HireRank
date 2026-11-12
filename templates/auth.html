@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Create account' if mode == 'register' else 'Log in' }} | HireRank{% endblock %}
+{% block public_content %}
+<div class="auth-wrap">
+  <div class="auth-aside"><span class="eyebrow">YOUR RECRUITMENT WORKSPACE</span><h2>Better hiring starts with better insight.</h2><p>Bring job requirements, candidate profiles and hiring history into one private workspace.</p><div class="auth-check"><i class="fa-solid fa-circle-check"></i> Explainable candidate matching</div><div class="auth-check"><i class="fa-solid fa-circle-check"></i> Private, local resume analysis</div><div class="auth-check"><i class="fa-solid fa-circle-check"></i> Decisions stay with your team</div></div>
+  <div class="auth-card">
+    <a href="{{ url_for('landing') }}" class="brand auth-brand"><span class="brand-mark"><i class="fa-solid fa-ranking-star"></i></span> HireRank</a>
+    <h1>{{ 'Create your account' if mode == 'register' else 'Welcome back' }}</h1><p class="muted">{{ 'Set up your HR workspace to get started.' if mode == 'register' else 'Sign in to continue to your workspace.' }}</p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if mode == 'register' %}
+      <label class="form-label">Full name</label><input class="form-control mb-3" name="full_name" required autocomplete="name" value="{{ request.form.get('full_name','') }}">
+      <label class="form-label">Company name</label><input class="form-control mb-3" name="company_name" required value="{{ request.form.get('company_name','') }}">
+      {% endif %}
+      <label class="form-label">Work email</label><input class="form-control mb-3" type="email" name="email" required autocomplete="email" value="{{ request.form.get('email','') }}">
+      <label class="form-label">Password</label><input class="form-control mb-3" type="password" name="password" required {% if mode == 'register' %}minlength="8"{% endif %} autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}">
+      {% if mode == 'register' %}<label class="form-label">Confirm password</label><input class="form-control mb-3" type="password" name="confirm_password" required minlength="8" autocomplete="new-password">{% endif %}
+      <button class="btn btn-primary w-100 mt-2">{{ 'Create account' if mode == 'register' else 'Log in' }} <i class="fa-solid fa-arrow-right ms-2"></i></button>
+    </form>
+    <p class="auth-switch">{{ 'Already have an account?' if mode == 'register' else 'New to HireRank?' }} <a href="{{ url_for('login' if mode == 'register' else 'register') }}">{{ 'Log in' if mode == 'register' else 'Create an account' }}</a></p>
+  </div>
+</div>
+{% endblock %}

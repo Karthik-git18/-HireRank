@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Profile | HireRank{% endblock %}
+{% block breadcrumb %}Workspace <span>/</span> Profile{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">ACCOUNT SETTINGS</span><h1>Your profile</h1><p>Manage your HR workspace details.</p></div></div>
+<div class="profile-layout"><section class="panel"><div class="section-title"><span class="profile-avatar">{{ user.full_name[:1]|upper }}</span><div><h2>{{ user.full_name }}</h2><p>{{ user.company_name }}</p></div></div><form method="post" class="mt-4"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="form-label">Full name</label><input class="form-control mb-3" name="full_name" required value="{{ user.full_name }}"><label class="form-label">Company name</label><input class="form-control mb-3" name="company_name" required value="{{ user.company_name }}"><label class="form-label">Email</label><input class="form-control mb-4" value="{{ user.email }}" readonly><button class="btn btn-primary">Save profile</button></form></section><aside class="panel"><h2>Privacy and security</h2><p class="muted">Resumes and candidate information are restricted to your account. Passwords are stored as secure hashes, and all state-changing forms require CSRF validation.</p><div class="callout-note"><i class="fa-solid fa-user-shield me-2"></i>Candidate decisions remain under your team’s control.</div></aside></div>
+{% endblock %}
